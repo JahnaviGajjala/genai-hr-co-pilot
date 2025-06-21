@@ -1,29 +1,49 @@
+# train_model.py
+
 import pandas as pd
 from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 import joblib
 import os
+import mlflow
+import mlflow.sklearn
 
-# Load data
+from preprocessing import build_pipeline, NUMERIC_FEATURES
+
+# Load training data
 df = pd.read_csv("data/hr_payroll_data.csv")
+X = df[NUMERIC_FEATURES]
 
-# Select features
-features = ["BaseSalary", "Bonus", "Deductions", "NetPay"]
-X = df[features]
+# Build preprocessing pipeline
+pipeline = build_pipeline()
+X_processed = pipeline.fit_transform(X)
 
-# Scale features
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-# Train model
+# Train the model
 model = IsolationForest(contamination=0.1, random_state=42)
-model.fit(X_scaled)
+model.fit(X_processed)
 
-# Create output dir if it doesn't exist
+# ─── Save model & pipeline locally ──────────────────────────────────────────────
 os.makedirs("app/model", exist_ok=True)
+model_path = "app/model/isolation_forest_model.pkl"
+pipeline_path = "app/model/payroll_scaler.pkl"
+joblib.dump(model, model_path)
+joblib.dump(pipeline, pipeline_path)
 
-# Save model and scaler
-joblib.dump(model, "app/model/isolation_forest_model.pkl")
-joblib.dump(scaler, "app/model/payroll_scaler.pkl")
+print("✅ Model and preprocessing pipeline saved.")
 
-print("✅ Model and scaler saved successfully in app/model/")
+# ─── MLflow Logging ─────────────────────────────────────────────────────────────
+mlflow.set_experiment("Payroll-Anomaly-Detection")
+
+with mlflow.start_run():
+    mlflow.log_param("model_type", "IsolationForest")
+    mlflow.log_param("contamination", 0.1)
+
+    # Log artifacts
+    mlflow.log_artifact(model_path, artifact_path="model")
+    mlflow.log_artifact(pipeline_path, artifact_path="pipeline")
+
+    # Optional: Add placeholder metrics (since IsolationForest is unsupervised)
+    mlflow.log_metric("num_training_rows", X.shape[0])
+    mlflow.log_metric("num_features", X.shape[1])
+
+    print("✅ Logged to MLflow.")
