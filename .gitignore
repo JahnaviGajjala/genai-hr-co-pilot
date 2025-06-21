@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Data & model artifacts
+*.pkl
+*.joblib
+*.pt
+*.h5
+*.csv
+
+# VS Code & OS files
+.vscode/
+.DS_Store
+
+# FastAPI or Uvicorn artifacts
+*.log
